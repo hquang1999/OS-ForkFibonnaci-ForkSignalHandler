@@ -14,7 +14,7 @@ void fib_forking(int x) {
 	long out;
 	int fd;
 
-	// opens the pipe to read and write
+	// opens the named pipe to read and write
 	if ((fd = open("myfifo", O_RDWR)) < 0) {
 		perror("open failure");
 		exit(2);
@@ -44,7 +44,8 @@ void fib_forking(int x) {
 			case 0:
 				{
 					// children node
-					fib_forking(x - 1);
+					// recurses down to one of the if conditions then exit
+					fib_forking(x - 2);
 					exit(0);
 					break;
 				}
@@ -52,15 +53,19 @@ void fib_forking(int x) {
 				{
 					// parent node
 					wait(NULL);
-					fib_forking(x - 2);
+					// once child finishes, do x - 1 recursion
+					fib_forking(x - 1);
 
+					// once recursion above breaks, read 2 values from pipe
 					read(fd, (void*) &out, sizeof(long));
 					long m1 = out;		
 
 					read(fd, (void*) &out, sizeof(long));
 					long m2 = out;		
 
+					// add 2 values, add them back into the pipe
 					long res = m1 + m2;
+					// FIFO works because it's all addition 
 					write(fd, (void*) &res, sizeof(long));
 					
 					break;
@@ -117,6 +122,7 @@ int main (int argc, char* argv[]) {
 		printf("Invalid Inputs\n");
 	}
 	else {
+		// Special condition to run RNG fibonacci
 		if ((n - 2) <= m) {
 			int seq = fib_seq(m);
 			printf("fib(%d) = %d\n", m, seq);
@@ -131,7 +137,7 @@ int main (int argc, char* argv[]) {
 			}
 			
 			// reads final result from pipe
-			read(fd,(void*)&out, sizeof(long));
+			read(fd,(void*) &out, sizeof(long));
 			printf("fib(%d) = %ld\n", n, out);
 		}
 	}
